@@ -1,0 +1,17 @@
+[package]
+name = "pantry"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+diesel = { version = "2.2.1", features = ["sqlite", "r2d2", "returning_clauses_for_sqlite_3_35"] }
+libsqlite3-sys = { version = "0.28.0", features = ["bundled"]}
+serde = { version = "1.0.203", features = ["derive"] }
+tracing = "0.1.40"
+actix-web = "4.6.0"
+actix-files = "0.6.5"
+apistos = { version = "0.2.5", features = ["extras", "qs_query"] }
+schemars = { package = "apistos-schemars", version = "0.8", features = ["chrono", "uuid1", "url", "rust_decimal"] }
+env_logger = "0.11.3"
+dotenvy = "0.15.7"
+diesel_migrations = "2.2.0"

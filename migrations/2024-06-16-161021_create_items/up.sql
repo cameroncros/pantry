@@ -1,0 +1,4 @@
+CREATE TABLE items (
+  id INTEGER NOT NULL PRIMARY KEY,
+  description VARCHAR NOT NULL
+)

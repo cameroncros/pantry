@@ -1,0 +1,42 @@
+# You can override the included template(s) by including variable overrides
+# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
+# Secret Detection customization: https://docs.gitlab.com/ee/user/application_security/secret_detection/#customizing-settings
+# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
+# Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
+# Note that environment variables can be set in several places
+# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
+stages:
+- test
+- live
+
+test:
+  stage: test
+  image: rust:buster
+  script:
+    - cargo install diesel_cli
+    - diesel migration run
+    - cargo test
+
+lint:
+  stage: test
+  image: rust:buster
+  script:
+    - cargo install diesel_cli
+    - rustup component add clippy
+    - diesel migration run
+    - cargo clippy
+
+live_deploy:
+  tags: [prod]
+  stage: live
+  image: docker/compose:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  script:
+    - |
+      cat <<EOT >> .env
+      BOT_TOKEN='$LIVE_BOT_TOKEN'
+      EXTERNAL_PORT=23416
+      EOT
+    - COMPOSE_PROJECT_NAME=prod_pantry docker-compose down || true
+    - COMPOSE_PROJECT_NAME=prod_pantry docker-compose up --build -d
