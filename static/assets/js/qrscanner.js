@@ -21,7 +21,7 @@ function get_item() {
             document.getElementById('description').value = responseJsonObj.description;
         }
     };
-    xhttp.open("GET", "api/item/" + id, true);
+    xhttp.open("GET", "/api/item/" + id, true);
     xhttp.send();
 }
 
@@ -33,7 +33,7 @@ document.getElementById('save').onclick = function () {
     const id = document.getElementById('id').value;
     const description = document.getElementById('description').value;
     const xhttp = new XMLHttpRequest();
-    xhttp.open("POST", "api/item/" + id, true);
+    xhttp.open("POST", "/api/item/" + id, true);
     const jsonData = {"id": id, "description": description};
 
     xhttp.send(JSON.stringify( jsonData ) );

@@ -24,9 +24,12 @@ pub fn new_item(
 ) -> Result<Item, DbError> {
     use crate::schema::items::dsl::*;
 
-    let result = diesel::insert_into(items).values(description.eq("")).get_result(conn);
-
-    Ok(result?)
+    loop {
+        let result = diesel::insert_into(items).values(description.eq("")).get_result(conn);
+        if result.is_ok() {
+            return Ok(result?);
+        }
+    }
 }
 
 pub fn update_item(
