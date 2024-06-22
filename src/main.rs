@@ -4,7 +4,7 @@ extern crate diesel;
 use std::path::PathBuf;
 
 use actix_files::NamedFile;
-use actix_web::{App, delete, error, Error, get, HttpRequest, HttpResponse, HttpServer, middleware, post, Responder, web};
+use actix_web::{App, delete, error, Error, get, HttpRequest, HttpResponse, HttpServer, middleware, post, put, Responder, web};
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use diesel::{prelude::*, r2d2};
@@ -62,7 +62,7 @@ async fn new_item(
     Ok(HttpResponse::Created().json(item))
 }
 
-#[post("/api/item/{id}")]
+#[put("/api/item/{id}")]
 async fn update_item(
     pool: web::Data<DbPool>,
     id: web::Path<i32>,
@@ -192,7 +192,7 @@ mod tests {
             description: "This is lasagna".to_string()
         };
         let uri = format!("/api/item/{}", &res1.id);
-        let req = test::TestRequest::post().uri(uri.as_str()).set_json(&res_new).to_request();
+        let req = test::TestRequest::put().uri(uri.as_str()).set_json(&res_new).to_request();
         let res2: models::Item = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res_new, res2);
 

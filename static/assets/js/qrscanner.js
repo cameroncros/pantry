@@ -33,8 +33,9 @@ document.getElementById('save').onclick = function () {
     const id = document.getElementById('id').value;
     const description = document.getElementById('description').value;
     const xhttp = new XMLHttpRequest();
-    xhttp.open("POST", "/api/item/" + id, true);
-    const jsonData = {"id": id, "description": description};
+    xhttp.open("PUT", "/api/item/" + id, true);
+    xhttp.setRequestHeader("Content-Type", "application/json")
+    const jsonData = {"id": parseInt(id), "description": description};
 
     xhttp.send(JSON.stringify( jsonData ) );
 }
