@@ -1,3 +1,12 @@
+let scanner = new Html5Qrcode("reader");
+config = {
+    qrbox: { width: 250, height: 250 },
+    aspectRatio: 1,
+    rememberLastUsedCamera: true,
+    // Only support camera scan type.
+    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+}
+
 function onScanSuccess(decodedText, decodedResult) {
     // handle the scanned code as you like, for example:
     console.log(`Code matched = ${decodedText}`, decodedResult);
@@ -9,7 +18,26 @@ function onScanSuccess(decodedText, decodedResult) {
     const rex = /([0-9]*)$/g;
     document.getElementById('id').value = decodedText.match(rex)[0];
     get_item();
+    stopScanner();
 }
+
+function stopScanner() {
+    scanner.stop();
+    let button = document.getElementById("button");
+    button.innerText = "Start Scan";
+    button.onclick = startScanner
+}
+
+function startScanner() {
+    scanner.start(
+        { facingMode: "environment" }, config, onScanSuccess
+    )
+    let button = document.getElementById("button");
+    button.innerText = "Stop Scan";
+    button.onclick = stopScanner
+}
+
+document.getElementById("button").onclick = startScanner;
 
 function get_item() {
     const id = document.getElementById('id').value;
@@ -39,14 +67,6 @@ document.getElementById('save').onclick = function () {
 
     xhttp.send(JSON.stringify( jsonData ) );
 }
-
-function onScanFailure(error) {}
-
-let html5QrcodeScanner = new Html5QrcodeScanner(
-    "reader",
-    { fps: 10 },
-    /* verbose= */ false);
-html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
 document.getElementById('id').value = window.location.hash.substring(1)
 get_item()
