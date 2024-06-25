@@ -1,4 +1,5 @@
 use diesel::prelude::*;
+use diesel::result::Error::DatabaseError;
 
 use crate::models;
 use crate::models::Item;
@@ -10,13 +11,30 @@ pub fn get_item(
     uid: i32,
 ) -> Result<Option<models::Item>, DbError> {
     use crate::schema::items::dsl::*;
-
-    let item = items
-        .filter(id.eq(uid))
-        .first::<models::Item>(conn)
-        .optional()?;
-
-    Ok(item)
+    loop {
+        let result = items
+            .filter(id.eq(uid))
+            .first::<models::Item>(conn)
+            .optional();
+        return match result {
+            Ok(item) => {
+                Ok(item)
+            }
+            Err(error) => {
+                match &error {
+                    DatabaseError(_, desc) => {
+                        if desc.details() == Some("database is locked") {
+                            continue
+                        }
+                        Err(Box::from(error))
+                    }
+                    _ => {
+                        Err(Box::from(error))
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn new_item(
@@ -26,8 +44,23 @@ pub fn new_item(
 
     loop {
         let result = diesel::insert_into(items).values(description.eq("")).get_result(conn);
-        if result.is_ok() {
-            return Ok(result?);
+        return match result {
+            Ok(item) => {
+                Ok(item)
+            }
+            Err(error) => {
+                match &error {
+                    DatabaseError(_, desc) => {
+                        if desc.details() == Some("database is locked") {
+                            continue
+                        }
+                        Err(Box::from(error))
+                    }
+                    _ => {
+                        Err(Box::from(error))
+                    }
+                }
+            }
         }
     }
 }
@@ -42,11 +75,29 @@ pub fn update_item(
     let mut new_item = nm.clone();
     new_item.id = *u_id;
 
-    let u = diesel::update(items.filter(id.eq(u_id)))
-        .set(description.eq(&nm.description))
-        .get_result(conn);
-
-    Ok(u?)
+    loop {
+        let result = diesel::insert_into(items).values(&new_item).on_conflict(id).do_update()
+            .set(description.eq(&nm.description))
+            .get_result(conn);
+        return match result {
+            Ok(item) => {
+                Ok(item)
+            }
+            Err(error) => {
+                match &error {
+                    DatabaseError(_, desc) => {
+                        if desc.details() == Some("database is locked") {
+                            continue
+                        }
+                        Err(Box::from(error))
+                    }
+                    _ => {
+                        Err(Box::from(error))
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn delete_item(
@@ -55,8 +106,26 @@ pub fn delete_item(
 ) -> Result<Item, DbError> {
     use crate::schema::items::dsl::*;
 
-    let u = diesel::delete(items.filter(id.eq(u_id)))
-        .get_result(conn);
-
-    Ok(u?)
+    loop {
+        let result = diesel::delete(items.filter(id.eq(u_id)))
+            .get_result(conn);
+        return match result {
+            Ok(item) => {
+                Ok(item)
+            }
+            Err(error) => {
+                match &error {
+                    DatabaseError(_, desc) => {
+                        if desc.details() == Some("database is locked") {
+                            continue
+                        }
+                        Err(Box::from(error))
+                    }
+                    _ => {
+                        Err(Box::from(error))
+                    }
+                }
+            }
+        }
+    }
 }
