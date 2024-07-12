@@ -23,7 +23,7 @@ pub fn get_item(
             Err(error) => {
                 match &error {
                     DatabaseError(_, desc) => {
-                        if desc.details() == Some("database is locked") {
+                        if desc.message() == "database is locked" {
                             continue
                         }
                         Err(Box::from(error))
@@ -51,7 +51,7 @@ pub fn new_item(
             Err(error) => {
                 match &error {
                     DatabaseError(_, desc) => {
-                        if desc.details() == Some("database is locked") {
+                        if desc.message() == "database is locked" {
                             continue
                         }
                         Err(Box::from(error))
@@ -86,7 +86,7 @@ pub fn update_item(
             Err(error) => {
                 match &error {
                     DatabaseError(_, desc) => {
-                        if desc.details() == Some("database is locked") {
+                        if desc.message() == "database is locked" {
                             continue
                         }
                         Err(Box::from(error))
@@ -116,7 +116,7 @@ pub fn delete_item(
             Err(error) => {
                 match &error {
                     DatabaseError(_, desc) => {
-                        if desc.details() == Some("database is locked") {
+                        if desc.message() == "database is locked" {
                             continue
                         }
                         Err(Box::from(error))
