@@ -4,24 +4,36 @@ extern crate diesel;
 use std::path::PathBuf;
 
 use actix_files::NamedFile;
-use actix_web::{App, delete, error, Error, get, HttpRequest, HttpResponse, HttpServer, middleware, post, put, Responder, web};
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
+use actix_web::{
+    delete, error, get, middleware, post, put, web, App, Error, HttpRequest, HttpResponse,
+    HttpServer, Responder,
+};
 use diesel::{prelude::*, r2d2};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+use crate::models::Item;
 
 mod actions;
 mod models;
 mod schema;
 
 type DbPool = r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>;
-
-#[get("/api/item/{item_id}")]
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Got the item", body = Item),
+        (status = 404, description = "Failed to get the item"),
+    ),
+    params(("id" = Integer, Path, description = "Item id")),
+)]
+#[get("/api/item/{id}")]
 async fn get_item(
     pool: web::Data<DbPool>,
-    item_id: web::Path<i32>,
+    id: web::Path<i32>,
 ) -> actix_web::Result<impl Responder> {
-    let item_uid = item_id.into_inner();
+    let item_uid = id.into_inner();
 
     // use web::block to offload blocking Diesel queries without blocking server thread
     let item = web::block(move || {
@@ -43,10 +55,14 @@ async fn get_item(
     })
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Added new item", body = Item),
+        (status = 500, description = "Failed to add new item"),
+    ),
+)]
 #[post("/api/item")]
-async fn new_item(
-    pool: web::Data<DbPool>,
-) -> actix_web::Result<impl Responder> {
+async fn new_item(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
     // use web::block to offload blocking Diesel queries without blocking server thread
     let item = web::block(move || {
         // note that obtaining a connection from the pool is also potentially blocking
@@ -61,7 +77,14 @@ async fn new_item(
     // item was added successfully; return 201 response with new item info
     Ok(HttpResponse::Created().json(item))
 }
-
+#[utoipa::path(
+    responses(
+        (status = 201, description = "Updated item", body = Item),
+        (status = 500, description = "Failed to update"),
+    ),
+    params(("id" = Integer, Path, description = "Item id")),
+    request_body(content = Item, description = "Item", content_type = "application/json"),
+)]
 #[put("/api/item/{id}")]
 async fn update_item(
     pool: web::Data<DbPool>,
@@ -75,14 +98,20 @@ async fn update_item(
 
         actions::update_item(&mut conn, &id, &item_in)
     })
-        .await?
-        // map diesel query errors to a 500 error response
-        .map_err(error::ErrorInternalServerError)?;
+    .await?
+    // map diesel query errors to a 500 error response
+    .map_err(error::ErrorInternalServerError)?;
 
     // item was added successfully; return 201 response with new item info
     Ok(HttpResponse::Accepted().json(item_out))
 }
-
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Deleted Item", body = Item),
+        (status = 500, description = "Failed to delete"),
+    ),
+    params(("id" = Integer, Path, description = "Item id")),
+)]
 #[delete("/api/item/{id}")]
 async fn delete_item(
     pool: web::Data<DbPool>,
@@ -95,19 +124,23 @@ async fn delete_item(
 
         actions::delete_item(&mut conn, &id)
     })
-        .await?
-        // map diesel query errors to a 500 error response
-        .map_err(error::ErrorInternalServerError)?;
+    .await?
+    // map diesel query errors to a 500 error response
+    .map_err(error::ErrorInternalServerError)?;
 
-    // item was added successfully; return 201 response with new item info
+    // item was added successfully; return 200 response with new item info
     Ok(HttpResponse::Ok().json(item_out))
 }
-
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Got file", body = File)
+    ),
+)]
 #[get("/{filename:.*}")]
 async fn index(req: HttpRequest) -> Result<NamedFile, Error> {
     let query_path = req.match_info().query("filename");
     let mut path = PathBuf::from(format!("static/{query_path}"));
-    if !path.is_file() || !path.exists()  {
+    if !path.is_file() || !path.exists() {
         path = PathBuf::from(format!("static/{query_path}/index.html"));
     }
     tracing::error!("Trying to read: [{path:#?}]");
@@ -124,6 +157,11 @@ fn create_app() -> App<
         InitError = (),
     >,
 > {
+    #[derive(OpenApi)]
+    #[openapi(paths(get_item, new_item, update_item, delete_item, index),
+        components(schemas(Item)))]
+    struct ApiDoc;
+
     let pool = initialize_db_pool();
     App::new()
         // add DB pool handle to app data; enables use of `web::Data<DbPool>` extractor
@@ -135,6 +173,9 @@ fn create_app() -> App<
         .service(new_item)
         .service(update_item)
         .service(delete_item)
+        .service(
+            SwaggerUi::new("/swagger-ui/{_:.*}")
+                .url("/api-docs/openapi.json", ApiDoc::openapi()))
         // This must be last, as the default
         .service(index)
 }
@@ -146,12 +187,10 @@ async fn main() -> std::io::Result<()> {
     dotenvy::dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    HttpServer::new(move || {
-        create_app()
-    })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+    HttpServer::new(create_app)
+        .bind(("0.0.0.0", 8080))?
+        .run()
+        .await
 }
 
 /// Initialize database connection pool, on file: ./.
@@ -164,13 +203,17 @@ fn initialize_db_pool() -> DbPool {
         .build(manager)
         .expect("database URL should be valid path to SQLite DB file");
 
-    pool.get().unwrap().run_pending_migrations(MIGRATIONS).unwrap();
+    pool.get()
+        .unwrap()
+        .run_pending_migrations(MIGRATIONS)
+        .unwrap();
     pool
 }
 
 #[cfg(test)]
 mod tests {
     use actix_web::{http::StatusCode, test};
+    use chrono::NaiveDate;
 
     use super::*;
 
@@ -178,9 +221,7 @@ mod tests {
     async fn api_item_crud() {
         dotenvy::dotenv().ok();
 
-        let app = test::init_service(
-            create_app(),
-        ).await;
+        let app = test::init_service(create_app()).await;
 
         // Create
         let req = test::TestRequest::post().uri("/api/item").to_request();
@@ -189,10 +230,14 @@ mod tests {
         // Update with name:
         let res_new = models::Item {
             id: res1.id,
-            description: "This is lasagna".to_string()
+            description: "This is lasagna".to_string(),
+            date: Some(NaiveDate::default())
         };
         let uri = format!("/api/item/{}", &res1.id);
-        let req = test::TestRequest::put().uri(uri.as_str()).set_json(&res_new).to_request();
+        let req = test::TestRequest::put()
+            .uri(uri.as_str())
+            .set_json(&res_new)
+            .to_request();
         let res2: models::Item = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res_new, res2);
 
@@ -219,9 +264,7 @@ mod tests {
     async fn static_get() {
         dotenvy::dotenv().ok();
 
-        let app = test::init_service(
-            create_app(),
-        ).await;
+        let app = test::init_service(create_app()).await;
 
         let req = test::TestRequest::get().uri("/").to_request();
         let res = test::call_service(&app, req).await;

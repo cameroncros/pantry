@@ -28,17 +28,6 @@ function stopScanner() {
     button.onclick = startScanner
 }
 
-function startScanner() {
-    scanner.start(
-        { facingMode: "environment" }, config, onScanSuccess
-    )
-    let button = document.getElementById("button");
-    button.innerText = "Stop Scan";
-    button.onclick = stopScanner
-}
-
-document.getElementById("button").onclick = startScanner;
-
 function get_item() {
     const id = document.getElementById('id').value;
     const xhttp = new XMLHttpRequest();
@@ -47,23 +36,38 @@ function get_item() {
             const responseJsonObj = JSON.parse(this.responseText);
 
             document.getElementById('description').value = responseJsonObj.description;
+            document.getElementById('date').value = responseJsonObj.date;
         }
     };
     xhttp.open("GET", "/api/item/" + id, true);
     xhttp.send();
 }
 
+document.getElementById("button").onclick = function startScanner() {
+    scanner.start(
+        { facingMode: "environment" }, config, onScanSuccess
+    )
+    let button = document.getElementById("button");
+    button.innerText = "Stop Scan";
+    button.onclick = stopScanner
+}
+
 document.getElementById('id').onchange = function () {
     get_item();
+}
+
+document.getElementById("updatedate").onclick = function () {
+    document.getElementById("date").valueAsDate = new Date();
 }
 
 document.getElementById('save').onclick = function () {
     const id = document.getElementById('id').value;
     const description = document.getElementById('description').value;
+    const date = document.getElementById('date').value;
     const xhttp = new XMLHttpRequest();
     xhttp.open("PUT", "/api/item/" + id, true);
     xhttp.setRequestHeader("Content-Type", "application/json")
-    const jsonData = {"id": parseInt(id), "description": description};
+    const jsonData = {"id": parseInt(id), "description": description, "date": date};
 
     xhttp.send(JSON.stringify( jsonData ) );
 }

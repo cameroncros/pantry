@@ -12,7 +12,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 
-class MyTestCase(unittest.TestCase):
+class EndToEndTests(unittest.TestCase):
     port = random.randint(10000, 65535)
     host = 'pantry'
 
@@ -46,17 +46,19 @@ class MyTestCase(unittest.TestCase):
         sleep(10)
 
         options = webdriver.FirefoxOptions()
-        self.driver = webdriver.Remote(command_executor=f"http://{self.dockerhost}:4444", options=options)
+        self.driver = webdriver.Remote(command_executor=f"http://127.0.0.1:4444", options=options)
 
     def tearDown(self):
         self._cleanup()
 
     def test_end_to_end(self):
-        resp1 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/1", json={"id": 1, "description": "First Item"})
+        resp1 = requests.put(f"http://127.0.0.1:{self.port}/api/item/1", json={"id": 1,
+                                                                               "description": "First Item"})
         self.assertEqual(HTTPStatus.ACCEPTED, resp1.status_code, resp1.content)
-        resp2 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/2", json={"id": 2, "description": "Second Item"})
+        resp2 = requests.put(f"http://127.0.0.1:{self.port}/api/item/2", json={"id": 2,
+                                                                               "description": "Second Item"})
         self.assertEqual(HTTPStatus.ACCEPTED, resp2.status_code, resp2.content)
-        resp3 = requests.delete(f"http://{self.dockerhost}:{self.port}/api/item/3")
+        resp3 = requests.delete(f"http://127.0.0.1:{self.port}/api/item/3")
         self.assertIn(resp3.status_code, [HTTPStatus.OK, HTTPStatus.INTERNAL_SERVER_ERROR], resp3.content)
 
         self.driver.get(f"http://{self.host}:8080/#1")
@@ -74,10 +76,11 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual("3", self.driver.find_element(By.ID, "id").get_attribute('value'))
         self.assertEqual("", self.driver.find_element(By.ID, "description").get_attribute('value'))
 
+        self.driver.find_element(By.ID, "updatedate").click()
         self.driver.find_element(By.ID, "description").send_keys("Third Item")
         self.driver.find_element(By.ID, "save").click()
 
-        resp3 = requests.get(f"http://{self.dockerhost}:{self.port}/api/item/3")
+        resp3 = requests.get(f"http://127.0.0.1:{self.port}/api/item/3")
         self.assertEqual(HTTPStatus.OK, resp3.status_code, resp3.content)
         item3 = json.loads(resp3.content)
         self.assertEqual("Third Item", item3["description"])
