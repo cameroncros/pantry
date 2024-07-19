@@ -49,7 +49,7 @@ class EndToEndTests(unittest.TestCase):
         sleep(10)
 
         options = webdriver.FirefoxOptions()
-        cls.driver = webdriver.Remote(command_executor=f"http://127.0.0.1:4444", options=options)
+        cls.driver = webdriver.Remote(command_executor=f"http://{cls.dockerhost}:4444", options=options)
 
     @classmethod
     def tearDownClass(cls):
@@ -66,13 +66,13 @@ class EndToEndTests(unittest.TestCase):
                          self.driver.find_element(By.ID, "date").get_attribute('value'))
 
     def test_end_to_end(self):
-        resp1 = requests.put(f"http://127.0.0.1:{self.port}/api/item/1", json={"id": 1,
+        resp1 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/1", json={"id": 1,
                                                                                "description": "First Item"})
         self.assertEqual(HTTPStatus.ACCEPTED, resp1.status_code, resp1.content)
-        resp2 = requests.put(f"http://127.0.0.1:{self.port}/api/item/2", json={"id": 2,
+        resp2 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/2", json={"id": 2,
                                                                                "description": "Second Item"})
         self.assertEqual(HTTPStatus.ACCEPTED, resp2.status_code, resp2.content)
-        resp3 = requests.delete(f"http://127.0.0.1:{self.port}/api/item/3")
+        resp3 = requests.delete(f"http://{self.dockerhost}:{self.port}/api/item/3")
         self.assertIn(resp3.status_code, [HTTPStatus.OK, HTTPStatus.INTERNAL_SERVER_ERROR], resp3.content)
 
         self.driver.get(f"http://{self.host}:8080/#1")
@@ -94,7 +94,7 @@ class EndToEndTests(unittest.TestCase):
         self.driver.find_element(By.ID, "description").send_keys("Third Item")
         self.driver.find_element(By.ID, "save").click()
 
-        resp3 = requests.get(f"http://127.0.0.1:{self.port}/api/item/3")
+        resp3 = requests.get(f"http://{self.dockerhost}:{self.port}/api/item/3")
         self.assertEqual(HTTPStatus.OK, resp3.status_code, resp3.content)
         item3 = json.loads(resp3.content)
         self.assertEqual("Third Item", item3["description"])
