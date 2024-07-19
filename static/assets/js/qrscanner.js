@@ -56,7 +56,7 @@ document.getElementById('id').onchange = function () {
     get_item();
 }
 
-document.getElementById("updatedate").onclick = function () {
+document.getElementById("today").onclick = function () {
     document.getElementById("date").valueAsDate = new Date();
 }
 

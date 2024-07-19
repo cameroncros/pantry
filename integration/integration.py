@@ -3,6 +3,7 @@ import os
 import random
 
 import unittest
+from datetime import datetime
 from http import HTTPStatus
 from time import sleep
 
@@ -16,7 +17,8 @@ class EndToEndTests(unittest.TestCase):
     port = random.randint(10000, 65535)
     host = 'pantry'
 
-    def _cleanup(self):
+    @classmethod
+    def _cleanup(cls):
         client = docker.client.from_env()
         try:
             client.containers.get("pantry").remove(force=True)
@@ -31,14 +33,15 @@ class EndToEndTests(unittest.TestCase):
         except:
             pass
 
-    def setUp(self):
-        self._cleanup()
+    @classmethod
+    def setUpClass(cls):
+        cls._cleanup()
         client = docker.client.from_env()
 
         net = client.networks.create("test_net")
-        self.dockerhost = net.attrs['IPAM']['Config'][0]['Gateway']
+        cls.dockerhost = net.attrs['IPAM']['Config'][0]['Gateway']
         client.images.build(path=f"{os.path.dirname(os.path.realpath(__file__))}/..", tag="pantry")
-        client.containers.run("pantry", ports={"8080/tcp": self.port}, detach=True, name="pantry", network="test_net")
+        client.containers.run("pantry", ports={"8080/tcp": cls.port}, detach=True, name="pantry", network="test_net")
 
         client.images.pull("selenium/standalone-firefox:latest")
         client.containers.run("selenium/standalone-firefox:latest",
@@ -46,10 +49,21 @@ class EndToEndTests(unittest.TestCase):
         sleep(10)
 
         options = webdriver.FirefoxOptions()
-        self.driver = webdriver.Remote(command_executor=f"http://127.0.0.1:4444", options=options)
+        cls.driver = webdriver.Remote(command_executor=f"http://127.0.0.1:4444", options=options)
 
-    def tearDown(self):
-        self._cleanup()
+    @classmethod
+    def tearDownClass(cls):
+        cls._cleanup()
+
+    def test_date_today(self):
+        self.driver.get(f"http://{self.host}:8080/")
+        self.driver.refresh()
+        self.assertEqual("", self.driver.find_element(By.ID, "date").get_attribute('value'))
+
+        self.driver.find_element(By.ID, "today").click()
+
+        self.assertEqual(datetime.today().strftime('%Y-%m-%d'),
+                         self.driver.find_element(By.ID, "date").get_attribute('value'))
 
     def test_end_to_end(self):
         resp1 = requests.put(f"http://127.0.0.1:{self.port}/api/item/1", json={"id": 1,
@@ -76,7 +90,7 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual("3", self.driver.find_element(By.ID, "id").get_attribute('value'))
         self.assertEqual("", self.driver.find_element(By.ID, "description").get_attribute('value'))
 
-        self.driver.find_element(By.ID, "updatedate").click()
+        self.driver.find_element(By.ID, "today").click()
         self.driver.find_element(By.ID, "description").send_keys("Third Item")
         self.driver.find_element(By.ID, "save").click()
 
