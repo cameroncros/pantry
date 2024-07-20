@@ -24,7 +24,6 @@ type DbPool = r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>;
 #[utoipa::path(
     responses(
         (status = 200, description = "Got the item", body = Item),
-        (status = 404, description = "Failed to get the item"),
     ),
     params(("id" = Integer, Path, description = "Item id")),
 )]
@@ -46,13 +45,7 @@ async fn get_item(
     // map diesel query errors to a 500 error response
     .map_err(error::ErrorInternalServerError)?;
 
-    Ok(match item {
-        // item was found; return 200 response with JSON formatted item object
-        Some(item) => HttpResponse::Ok().json(item),
-
-        // item was not found; return 404 response with error message
-        None => HttpResponse::NotFound().body(format!("No item found with UID: {item_uid}")),
-    })
+    Ok(HttpResponse::Ok().json(item))
 }
 
 #[utoipa::path(
@@ -257,7 +250,7 @@ mod tests {
         let uri = format!("/api/item/{}", &res1.id);
         let req = test::TestRequest::get().uri(uri.as_str()).to_request();
         let res5 = test::call_service(&app, req).await;
-        assert_eq!(res5.status(), StatusCode::NOT_FOUND);
+        assert_eq!(res5.status(), StatusCode::OK);
     }
 
     #[actix_web::test]

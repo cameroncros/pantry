@@ -63,7 +63,10 @@ document.getElementById("today").onclick = function () {
 document.getElementById('save').onclick = function () {
     const id = document.getElementById('id').value;
     const description = document.getElementById('description').value;
-    const date = document.getElementById('date').value;
+    let date = document.getElementById('date').value;
+    if (date === "") {
+        date = null;
+    }
     const xhttp = new XMLHttpRequest();
     xhttp.open("PUT", "/api/item/" + id, true);
     xhttp.setRequestHeader("Content-Type", "application/json")

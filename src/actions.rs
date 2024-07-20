@@ -6,15 +6,20 @@ use crate::models::Item;
 
 type DbError = Box<dyn std::error::Error + Send + Sync>;
 
-pub fn get_item(conn: &mut SqliteConnection, uid: i32) -> Result<Option<models::Item>, DbError> {
+pub fn get_item(conn: &mut SqliteConnection, uid: i32) -> Result<models::Item, DbError> {
     use crate::schema::items::dsl::*;
     loop {
         let result = items
             .filter(id.eq(uid))
-            .first::<models::Item>(conn)
+            .first::<Item>(conn)
             .optional();
         return match result {
-            Ok(item) => Ok(item),
+            Ok(item) => {
+                match item {
+                    None => { Ok(Item {id: uid, description: "".to_string(), date: None })}
+                    Some(i) => {Ok(i)}
+                }
+            },
             Err(error) => match &error {
                 DatabaseError(_, desc) => {
                     if desc.message() == "database is locked" {
