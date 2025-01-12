@@ -25,7 +25,7 @@ type DbPool = r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>;
     responses(
         (status = 200, description = "Got the item", body = Item),
     ),
-    params(("id" = Integer, Path, description = "Item id")),
+    params(("id" = u64, Path, description = "Item id")),
 )]
 #[get("/api/item/{id}")]
 async fn get_item(
@@ -44,6 +44,29 @@ async fn get_item(
     .await?
     // map diesel query errors to a 500 error response
     .map_err(error::ErrorInternalServerError)?;
+
+    Ok(HttpResponse::Ok().json(item))
+}
+
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Got the items", body = Item),
+    )
+)]
+#[get("/api/all_items")]
+async fn get_all_items(
+    pool: web::Data<DbPool>,
+) -> actix_web::Result<impl Responder> {
+    // use web::block to offload blocking Diesel queries without blocking server thread
+    let item = web::block(move || {
+        // note that obtaining a connection from the pool is also potentially blocking
+        let mut conn = pool.get()?;
+
+        actions::get_all_items(&mut conn)
+    })
+        .await?
+        // map diesel query errors to a 500 error response
+        .map_err(error::ErrorInternalServerError)?;
 
     Ok(HttpResponse::Ok().json(item))
 }
@@ -75,7 +98,7 @@ async fn new_item(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> 
         (status = 201, description = "Updated item", body = Item),
         (status = 500, description = "Failed to update"),
     ),
-    params(("id" = Integer, Path, description = "Item id")),
+    params(("id" = u64, Path, description = "Item id")),
     request_body(content = Item, description = "Item", content_type = "application/json"),
 )]
 #[put("/api/item/{id}")]
@@ -103,7 +126,7 @@ async fn update_item(
         (status = 200, description = "Deleted Item", body = Item),
         (status = 500, description = "Failed to delete"),
     ),
-    params(("id" = Integer, Path, description = "Item id")),
+    params(("id" = u64, Path, description = "Item id")),
 )]
 #[delete("/api/item/{id}")]
 async fn delete_item(
@@ -124,9 +147,10 @@ async fn delete_item(
     // item was added successfully; return 200 response with new item info
     Ok(HttpResponse::Ok().json(item_out))
 }
+
 #[utoipa::path(
     responses(
-        (status = 200, description = "Got file", body = File)
+        (status = 200, description = "Got file", body = String)
     ),
 )]
 #[get("/{filename:.*}")]
@@ -163,6 +187,7 @@ fn create_app() -> App<
         .wrap(middleware::Logger::default())
         // add route handlers
         .service(get_item)
+        .service(get_all_items)
         .service(new_item)
         .service(update_item)
         .service(delete_item)
@@ -249,6 +274,12 @@ mod tests {
         // Get:
         let uri = format!("/api/item/{}", &res1.id);
         let req = test::TestRequest::get().uri(uri.as_str()).to_request();
+        let res5 = test::call_service(&app, req).await;
+        assert_eq!(res5.status(), StatusCode::OK);
+
+        // Get All:
+        let uri = "/api/all_items";
+        let req = test::TestRequest::get().uri(uri).to_request();
         let res5 = test::call_service(&app, req).await;
         assert_eq!(res5.status(), StatusCode::OK);
     }

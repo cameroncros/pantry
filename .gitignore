@@ -1,3 +1,4 @@
 target/
 db/pantry.db
 src/schema.rs
+/integration/venv/

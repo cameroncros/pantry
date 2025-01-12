@@ -33,6 +33,27 @@ pub fn get_item(conn: &mut SqliteConnection, uid: i32) -> Result<models::Item, D
     }
 }
 
+pub fn get_all_items(conn: &mut SqliteConnection) -> Result<Vec<Item>, DbError> {
+    use crate::schema::items::dsl::*;
+    loop {
+        let result = items.load::<Item>(conn);
+        return match result {
+            Ok(all_items) => {
+               Ok(all_items)
+            },
+            Err(error) => match &error {
+                DatabaseError(_, desc) => {
+                    if desc.message() == "database is locked" {
+                        continue;
+                    }
+                    Err(Box::from(error))
+                }
+                _ => Err(Box::from(error)),
+            },
+        };
+    }
+}
+
 pub fn new_item(conn: &mut SqliteConnection) -> Result<Item, DbError> {
     use crate::schema::items::dsl::*;
 

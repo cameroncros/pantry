@@ -1,6 +1,6 @@
 # Leveraging the pre-built Docker images with
 # cargo-chef and the Rust toolchain
-FROM lukemathwalker/cargo-chef:latest AS chef
+FROM lukemathwalker/cargo-chef:0.1.68-rust-latest AS chef
 WORKDIR app
 
 FROM chef AS planner
@@ -20,6 +20,7 @@ RUN cargo build --release --bin pantry
 
 # We do not need the Rust toolchain to run the binary!
 FROM ubuntu:latest AS runtime
+RUN apt update && apt install sqlite3 -y
 WORKDIR app
 RUN mkdir -p /app/db && mkdir -p /app/static
 COPY .env /app/

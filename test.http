@@ -1,0 +1,16 @@
+GET http://127.0.0.1:8080/api/item/1
+Accept: application/json
+
+###
+POST http://127.0.0.1:8080/api/item
+Accept: application/json
+
+###
+POST http://127.0.0.1:8080/api/item/1
+Accept: application/json
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "content"
+}
