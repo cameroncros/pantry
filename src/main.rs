@@ -50,7 +50,7 @@ async fn get_item(
 
 #[utoipa::path(
     responses(
-        (status = 200, description = "Got the items", body = Item),
+        (status = 200, description = "Got the items", body = Vec<Item>),
     )
 )]
 #[get("/api/all_items")]

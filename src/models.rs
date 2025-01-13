@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+#[allow(unused_imports)]
 use serde_json::json;
 use utoipa::{ToSchema};
 
