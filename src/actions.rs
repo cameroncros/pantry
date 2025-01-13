@@ -54,28 +54,6 @@ pub fn get_all_items(conn: &mut SqliteConnection) -> Result<Vec<Item>, DbError> 
     }
 }
 
-pub fn new_item(conn: &mut SqliteConnection) -> Result<Item, DbError> {
-    use crate::schema::items::dsl::*;
-
-    loop {
-        let result = diesel::insert_into(items)
-            .values(description.eq(""))
-            .get_result(conn);
-        return match result {
-            Ok(item) => Ok(item),
-            Err(error) => match &error {
-                DatabaseError(_, desc) => {
-                    if desc.message() == "database is locked" {
-                        continue;
-                    }
-                    Err(Box::from(error))
-                }
-                _ => Err(Box::from(error)),
-            },
-        };
-    }
-}
-
 pub fn update_item(conn: &mut SqliteConnection, u_id: &i32, nm: &Item) -> Result<Item, DbError> {
     use crate::schema::items::dsl::*;
 

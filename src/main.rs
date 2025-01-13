@@ -7,7 +7,7 @@ use actix_files::NamedFile;
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::{
-    delete, error, get, middleware, post, put, web, App, Error, HttpRequest, HttpResponse,
+    delete, error, get, middleware, put, web, App, Error, HttpRequest, HttpResponse,
     HttpServer, Responder,
 };
 use diesel::{prelude::*, r2d2};
@@ -71,28 +71,6 @@ async fn get_all_items(
     Ok(HttpResponse::Ok().json(item))
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, description = "Added new item", body = Item),
-        (status = 500, description = "Failed to add new item"),
-    ),
-)]
-#[post("/api/item")]
-async fn new_item(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
-    // use web::block to offload blocking Diesel queries without blocking server thread
-    let item = web::block(move || {
-        // note that obtaining a connection from the pool is also potentially blocking
-        let mut conn = pool.get()?;
-
-        actions::new_item(&mut conn)
-    })
-    .await?
-    // map diesel query errors to a 500 error response
-    .map_err(error::ErrorInternalServerError)?;
-
-    // item was added successfully; return 201 response with new item info
-    Ok(HttpResponse::Created().json(item))
-}
 #[utoipa::path(
     responses(
         (status = 201, description = "Updated item", body = Item),
@@ -175,7 +153,7 @@ fn create_app() -> App<
     >,
 > {
     #[derive(OpenApi)]
-    #[openapi(paths(get_all_items, get_item, new_item, update_item, delete_item),
+    #[openapi(paths(get_all_items, get_item, update_item, delete_item),
         components(schemas(Item)))]
     struct ApiDoc;
 
@@ -188,7 +166,6 @@ fn create_app() -> App<
         // add route handlers
         .service(get_item)
         .service(get_all_items)
-        .service(new_item)
         .service(update_item)
         .service(delete_item)
         .service(
@@ -240,18 +217,16 @@ mod tests {
         dotenvy::dotenv().ok();
 
         let app = test::init_service(create_app()).await;
+        
+        let id = 1;
 
-        // Create
-        let req = test::TestRequest::post().uri("/api/item").to_request();
-        let res1: models::Item = test::call_and_read_body_json(&app, req).await;
-
-        // Update with name:
+        // Create/Update with name:
         let res_new = models::Item {
-            id: res1.id,
+            id: id,
             description: "This is lasagna".to_string(),
             date: Some(NaiveDate::default())
         };
-        let uri = format!("/api/item/{}", &res1.id);
+        let uri = format!("/api/item/{}", id);
         let req = test::TestRequest::put()
             .uri(uri.as_str())
             .set_json(&res_new)
@@ -266,13 +241,13 @@ mod tests {
         assert_eq!(res_new, res3);
 
         // Delete:
-        let uri = format!("/api/item/{}", &res1.id);
+        let uri = format!("/api/item/{}", id);
         let req = test::TestRequest::delete().uri(uri.as_str()).to_request();
         let res4: models::Item = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res_new, res4);
 
         // Get:
-        let uri = format!("/api/item/{}", &res1.id);
+        let uri = format!("/api/item/{}", id);
         let req = test::TestRequest::get().uri(uri.as_str()).to_request();
         let res5 = test::call_service(&app, req).await;
         assert_eq!(res5.status(), StatusCode::OK);
