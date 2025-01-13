@@ -175,7 +175,7 @@ fn create_app() -> App<
     >,
 > {
     #[derive(OpenApi)]
-    #[openapi(paths(get_item, new_item, update_item, delete_item, index),
+    #[openapi(paths(get_all_items, get_item, new_item, update_item, delete_item),
         components(schemas(Item)))]
     struct ApiDoc;
 

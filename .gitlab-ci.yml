@@ -29,7 +29,7 @@ test:
   script:
     - cargo install diesel_cli
     - diesel migration run
-    - cargo test
+    - RUST_BACKTRACE=1 cargo test
 
 integration:
   stage: test
