@@ -231,12 +231,7 @@ mod tests {
             .uri(uri.as_str())
             .set_json(&res_new)
             .to_request();
-        let resp = test::call_service(&app, req).await;
-        println!("{:#?}", resp.response());
-        let body = &test::read_body(resp).await;
-        println!("{:#?}", body);
-        // let res2: models::Item = test::call_and_read_body_json(&app, req).await;
-        let res2 = serde_json::from_slice(&body).unwrap();
+        let res2: models::Item = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res_new, res2);
 
         // Get:
