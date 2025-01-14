@@ -6,5 +6,5 @@ services:
     ports:
       - "21080:8080"
     restart: always
-#    volumes:
-#      - /opt/pantry/db:/app/db
+    volumes:
+      - /opt/pantry/db:/app/db
