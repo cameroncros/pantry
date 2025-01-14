@@ -23,7 +23,7 @@ build:
 
 test:
   stage: test
-  image: rust:buster
+  image: rust:latest
   dependencies:
     - build
   script:
