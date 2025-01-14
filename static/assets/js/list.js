@@ -17,7 +17,10 @@ function get_items() {
             responseJsonObj.forEach(item => {
                 let row = table.insertRow(-1);
                 let id_cell = row.insertCell(-1);
-                id_cell.innerText = item.id;
+                let id_button = document.createElement("a");
+                id_button.href = "/#" + item.id;
+                id_button.innerText = item.id;
+                id_cell.appendChild(id_button);
                 let date_cell =  row.insertCell(-1);
                 date_cell.innerText = item.date;
                 let desc_cell =  row.insertCell(-1);

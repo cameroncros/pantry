@@ -39,14 +39,26 @@ class EndToEndTests(unittest.TestCase):
         client = docker.client.from_env()
 
         net = client.networks.create("test_net")
-        cls.dockerhost = net.attrs['IPAM']['Config'][0]['Gateway']
+        addresses = [net.attrs['IPAM']['Config'][0]['Gateway'],
+                     '127.0.0.1']
         client.images.build(path=f"{os.path.dirname(os.path.realpath(__file__))}/..", tag="pantry")
         client.containers.run("pantry", ports={"8080/tcp": cls.port}, detach=True, name="pantry", network="test_net")
 
         client.images.pull("selenium/standalone-firefox:latest")
         client.containers.run("selenium/standalone-firefox:latest",
                               shm_size='2g', detach=True, name="selenium", ports={"4444/tcp": 4444}, network="test_net")
-        sleep(10)
+
+        for i in range(60):
+            try:
+                addr = addresses[i%len(addresses)]
+                requests.get(f"http://{addr}:4444", timeout=1)
+                cls.dockerhost = addr
+                break
+            except requests.exceptions.ConnectionError:
+                sleep(1)
+                continue
+        else:
+            cls.fail(cls, f"Can't reach selenium box - http://{cls.dockerhost}:4444")
 
         options = webdriver.FirefoxOptions()
         cls.driver = webdriver.Remote(command_executor=f"http://{cls.dockerhost}:4444", options=options)
@@ -98,6 +110,32 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(HTTPStatus.OK, resp3.status_code, resp3.content)
         item3 = json.loads(resp3.content)
         self.assertEqual("Third Item", item3["description"])
+
+    def test_list(self):
+        resp1 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/1", json={"id": 1,
+                                                                                       "description": "First Item"})
+        self.assertEqual(HTTPStatus.ACCEPTED, resp1.status_code, resp1.content)
+        resp2 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/2", json={"id": 2,
+                                                                                       "description": "Second Item"})
+        self.assertEqual(HTTPStatus.ACCEPTED, resp2.status_code, resp2.content)
+        resp3 = requests.delete(f"http://{self.dockerhost}:{self.port}/api/item/3")
+        self.assertIn(resp3.status_code, [HTTPStatus.OK, HTTPStatus.INTERNAL_SERVER_ERROR], resp3.content)
+
+        self.driver.get(f"http://{self.host}:8080/list/")
+
+        self.assertEqual(1, len(self.driver.find_elements(by=By.XPATH, value="//*[contains(text(), 'First Item')]")))
+        self.assertEqual(1, len(self.driver.find_elements(by=By.XPATH, value="//*[contains(text(), 'Second Item')]")))
+        self.assertEqual(0, len(self.driver.find_elements(by=By.XPATH, value="//*[contains(text(), '3')]")))
+
+        self.driver.find_elements(by=By.XPATH, value="//*[contains(text(), 'delete')]")[1].click()
+
+        self.driver.get(f"http://{self.host}:8080/list/")
+
+        self.assertEqual(0, len(self.driver.find_elements(by=By.XPATH, value="//*[contains(text(), 'Second Item')]")))
+
+        self.driver.find_elements(by=By.XPATH, value="//*[contains(text(), '1')]")[0].click()
+
+        self.assertEqual(self.driver.current_url, f"http://{self.host}:8080/#1")
 
 
 if __name__ == '__main__':
