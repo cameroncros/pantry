@@ -11,19 +11,18 @@ function flash() {
     ndef.write({
         records: [{recordType: "url", data: url}]
     }).then(() => {
-        console.log("Message written.");
+        item_index.value -= -1;
+        alert("Message written.");
     }).catch(error => {
-        console.log(`Write failed :-( try again: ${error}.`);
+        alert(`Write failed :-( try again: ${error}.`);
     });
-
-    item_index.value -= -1;
 
     button.disabled = false;
 }
 
 if ('NDEFReader' in window) {
     support_warning.style.display = 'none';
-    button.onclick = flash()
+    button.onclick = function () { flash() }
 } else {
     item_index.disabled = true;
     button.disabled = true;
