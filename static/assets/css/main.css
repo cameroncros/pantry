@@ -3219,3 +3219,7 @@ ul.feature-icons li:nth-child(1), ul.feature-icons li:nth-child(2) {
 
 }
 
+h2, .content {
+    margin: 2rem;
+}
+
