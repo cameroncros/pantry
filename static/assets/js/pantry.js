@@ -1,7 +1,7 @@
 function get_item() {
     const id = document.getElementById('id').value;
     const xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function() {
+    xhttp.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
             const responseJsonObj = JSON.parse(this.responseText);
 
@@ -33,7 +33,14 @@ document.getElementById('save').onclick = function () {
     xhttp.setRequestHeader("Content-Type", "application/json")
     const jsonData = {"id": parseInt(id), "description": description, "date": date};
 
-    xhttp.send(JSON.stringify( jsonData ) );
+    xhttp.send(JSON.stringify(jsonData));
+}
+
+document.getElementById('delete').onclick = function () {
+    const id = document.getElementById('id').value;
+    delete_item(id, () => {
+        window.location.href = '/list';
+    });
 }
 
 document.getElementById('id').value = window.location.hash.substring(1)
