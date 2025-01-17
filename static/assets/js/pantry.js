@@ -43,5 +43,8 @@ document.getElementById('delete').onclick = function () {
     });
 }
 
+if (window.location.hash === "") {
+    window.location.href = "/list";
+}
 document.getElementById('id').value = window.location.hash.substring(1)
 get_item()
