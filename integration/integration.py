@@ -1,7 +1,6 @@
 import json
 import os
 import random
-
 import unittest
 from datetime import datetime
 from http import HTTPStatus
@@ -41,20 +40,25 @@ class EndToEndTests(unittest.TestCase):
         net = client.networks.create("test_net")
         addresses = [net.attrs['IPAM']['Config'][0]['Gateway'],
                      '127.0.0.1']
+
+        print("Starting for Pantry")
         client.images.build(path=f"{os.path.dirname(os.path.realpath(__file__))}/..", tag="pantry")
         client.containers.run("pantry", ports={"8080/tcp": cls.port}, detach=True, name="pantry", network="test_net")
 
+        print("Starting for Selenium")
         client.images.pull("selenium/standalone-firefox:latest")
         client.containers.run("selenium/standalone-firefox:latest",
                               shm_size='2g', detach=True, name="selenium", ports={"4444/tcp": 4444}, network="test_net")
 
+        print("Waiting for Selenium")
         for i in range(60):
             try:
-                addr = addresses[i%len(addresses)]
+                addr = addresses[i % len(addresses)]
                 requests.get(f"http://{addr}:4444", timeout=1)
                 cls.dockerhost = addr
                 break
             except requests.exceptions.ConnectionError:
+                print(".", end="")
                 sleep(1)
                 continue
         else:
@@ -63,12 +67,24 @@ class EndToEndTests(unittest.TestCase):
         options = webdriver.FirefoxOptions()
         cls.driver = webdriver.Remote(command_executor=f"http://{cls.dockerhost}:4444", options=options)
 
+        print("Waiting for Pantry")
+        for i in range(300):
+            try:
+                resp = requests.get(f"http://{cls.dockerhost}:8080/")
+                if resp.status_code == 200:
+                    break
+            except:
+                pass
+            print(".", end="")
+            sleep(1)
+            continue
+
     @classmethod
     def tearDownClass(cls):
         cls._cleanup()
 
     def test_date_today(self):
-        self.driver.get(f"http://{self.host}:8080/")
+        self.driver.get(f"http://{self.host}:8080/#1")
         self.driver.refresh()
         self.assertEqual("", self.driver.find_element(By.ID, "date").get_attribute('value'))
 
@@ -79,10 +95,10 @@ class EndToEndTests(unittest.TestCase):
 
     def test_end_to_end(self):
         resp1 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/1", json={"id": 1,
-                                                                               "description": "First Item"})
+                                                                                       "description": "First Item"})
         self.assertEqual(HTTPStatus.ACCEPTED, resp1.status_code, resp1.content)
         resp2 = requests.put(f"http://{self.dockerhost}:{self.port}/api/item/2", json={"id": 2,
-                                                                               "description": "Second Item"})
+                                                                                       "description": "Second Item"})
         self.assertEqual(HTTPStatus.ACCEPTED, resp2.status_code, resp2.content)
         resp3 = requests.delete(f"http://{self.dockerhost}:{self.port}/api/item/3")
         self.assertIn(resp3.status_code, [HTTPStatus.OK, HTTPStatus.INTERNAL_SERVER_ERROR], resp3.content)
