@@ -24,16 +24,32 @@ document.getElementById("today").onclick = function () {
 document.getElementById('save').onclick = function () {
     const id = document.getElementById('id').value;
     const description = document.getElementById('description').value;
-    let date = document.getElementById('date').value;
-    if (date === "") {
-        date = null;
-    }
-    const xhttp = new XMLHttpRequest();
-    xhttp.open("PUT", "/api/item/" + id, true);
-    xhttp.setRequestHeader("Content-Type", "application/json")
-    const jsonData = {"id": parseInt(id), "description": description, "date": date};
+    show_banner("Saving...");
+    setTimeout(() => {
+            let date = document.getElementById('date').value;
+            if (date === "") {
+                date = null;
+            }
+            const xhttp = new XMLHttpRequest();
+            xhttp.open("PUT", "/api/item/" + id, true);
+            xhttp.setRequestHeader("Content-Type", "application/json");
+            xhttp.onreadystatechange = function () {
+                if (this.readyState === 4 && this.status === 202) {
+                    const responseJsonObj = JSON.parse(this.responseText);
 
-    xhttp.send(JSON.stringify(jsonData));
+                    document.getElementById('description').value = responseJsonObj.description;
+                    document.getElementById('date').value = responseJsonObj.date;
+
+                    hide_banner("Saved");
+                } else {
+                    show_banner("Not Saved");
+                }
+            };
+            const jsonData = {"id": parseInt(id), "description": description, "date": date};
+
+            xhttp.send(JSON.stringify(jsonData));
+        },
+        0.5)
 }
 
 document.getElementById('delete').onclick = function () {

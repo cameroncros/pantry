@@ -110,17 +110,6 @@ body {
     overflow-x: hidden;
 }
 
-body.is-preload *, body.is-preload *:before, body.is-preload *:after {
-    -moz-animation: none !important;
-    -webkit-animation: none !important;
-    -ms-animation: none !important;
-    animation: none !important;
-    -moz-transition: none !important;
-    -webkit-transition: none !important;
-    -ms-transition: none !important;
-    transition: none !important;
-}
-
 /* Typography */
 
 html {
@@ -913,4 +902,29 @@ table.alt tfoot {
 h2, .content {
     margin: 2rem;
 }
+
+.floating {
+    position: fixed;
+    width: 100%;
+    top: 10px;
+}
+
+.floating h2 {
+    z-index: 9999;
+    background: #2ee4bb;
+    margin: auto;
+    padding: 1rem 1rem;
+    width: min-content;
+}
+
+.hidden {
+    display: none;
+}
+
+.hideme {
+    visibility: visible;
+    opacity: 0;
+    transition: visibility 0s 4s, opacity 4s linear;
+}
+
 
