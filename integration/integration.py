@@ -41,11 +41,11 @@ class EndToEndTests(unittest.TestCase):
         addresses = [net.attrs['IPAM']['Config'][0]['Gateway'],
                      '127.0.0.1']
 
-        print("Starting for Pantry")
+        print("Starting Pantry")
         client.images.build(path=f"{os.path.dirname(os.path.realpath(__file__))}/..", tag="pantry")
         client.containers.run("pantry", ports={"8080/tcp": cls.port}, detach=True, name="pantry", network="test_net")
 
-        print("Starting for Selenium")
+        print("Starting Selenium")
         client.images.pull("selenium/standalone-firefox:latest")
         client.containers.run("selenium/standalone-firefox:latest",
                               shm_size='2g', detach=True, name="selenium", ports={"4444/tcp": 4444}, network="test_net")
@@ -70,9 +70,8 @@ class EndToEndTests(unittest.TestCase):
         print("Waiting for Pantry")
         for i in range(300):
             try:
-                resp = requests.get(f"http://{cls.dockerhost}:8080/")
-                if resp.status_code == 200:
-                    break
+                cls.driver.get(f"http://{cls.host}:8080/#1")
+                cls.driver.find_element(By.ID, "date")
             except:
                 pass
             print(".", end="")
