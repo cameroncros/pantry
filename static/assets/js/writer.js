@@ -7,28 +7,19 @@ function flash() {
 
     show_banner("Flashing...");
 
-    while (true) {
-        let url = window.location.origin + "/#" + item_index.value;
+    let url = window.location.origin + "/#" + item_index.value;
 
-        let success = true;
-
-        const ndef = new NDEFReader();
-        ndef.write({
-            records: [{recordType: "url", data: url}]
-        }).then(() => {
-            item_index.value -= -1;
-            show_banner("Message written.");
-        }).catch(error => {
-            hide_banner(`Write failed :-( try again: ${error}.`);
-            success = false;
-        });
-
-        if (!success) {
-            break
-        }
-    }
-
-    button.disabled = false;
+    const ndef = new NDEFReader();
+    ndef.write({
+        records: [{recordType: "url", data: url}]
+    }).then(() => {
+        item_index.value -= -1;
+        show_banner("Message written.");
+        button.disabled = false;
+    }).catch(error => {
+        hide_banner(`Write failed :-( try again: ${error}.`);
+        button.disabled = false;
+    });
 
 }
 
